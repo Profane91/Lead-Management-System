@@ -13,15 +13,15 @@ account_id = "89f1cccb6a6de43135b01002d5a35839"
 [env.production]
 name = "lead-gateway"
 # Set environment variables with: wrangler secret put <NAME>
-# N8N_WEBHOOK_URL = "https://temp.reliantcleanandrepair.com/webhook/lead-intake"
+# N8N_WEBHOOK_URL = "https://temp.example.com/webhook/lead-intake"
 # WORKER_SHARED_SECRET = "your-secret-key-here"
-# ALLOWED_ORIGINS = "https://reliantcleanandrepair.com,https://www.reliantcleanandrepair.com"
+# ALLOWED_ORIGINS = "https://example.com,https://www.example.com"
 
 [env.staging]
 name = "lead-gateway-staging"
-# N8N_WEBHOOK_URL = "https://temp.reliantcleanandrepair.com/webhook/test-lead-intake"
+# N8N_WEBHOOK_URL = "https://temp.example.com/webhook/test-lead-intake"
 # WORKER_SHARED_SECRET = "staging-secret"
-# ALLOWED_ORIGINS = "http://localhost:4321,https://staging.reliantcleanandrepair.com"
+# ALLOWED_ORIGINS = "http://localhost:4321,https://staging.example.com"
 
 # Development environment
 [env.development]

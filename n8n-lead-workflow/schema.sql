@@ -62,7 +62,7 @@ CREATE INDEX idx_leads_source ON leads(source);
 CREATE INDEX idx_leads_raw_gin ON leads USING gin(raw jsonb_path_ops);
 
 -- ================================================
--- Seed Data: Insert Reliant Clean & Repair
+-- Seed Data: Insert Example Business
 -- ================================================
 INSERT INTO clients (
     client_id,
@@ -76,18 +76,18 @@ INSERT INTO clients (
     auto_reply_email_subject,
     auto_reply_email_body
 ) VALUES (
-    'reliant',
-    'Reliant Clean & Repair',
+    'example',
+    'Example Business',
     '+15551234567', -- CHANGE THIS to real phone
-    'owner@reliantcleanandrepair.com', -- CHANGE THIS to real email
+    'owner@example.com', -- CHANGE THIS to real email
     true,
     true,
     true,
-    'Thank you for contacting Reliant Clean & Repair! We received your request and will respond within 24 hours. Call us at (555) 123-4567 if you need immediate assistance.',
-    'Thank You for Contacting Reliant Clean & Repair',
+    'Thank you for contacting Example Business! We received your request and will respond within 24 hours. Call us at (555) 123-4567 if you need immediate assistance.',
+    'Thank You for Contacting Example Business',
     'Hi {{name}},
 
-Thank you for reaching out to Reliant Clean & Repair!
+Thank you for reaching out to Example Business!
 
 We received your inquiry about: {{service}}
 
@@ -96,7 +96,7 @@ Our team will review your request and get back to you within 24 hours with a det
 In the meantime, if you have any urgent questions, feel free to call us at (555) 123-4567.
 
 Best regards,
-Reliant Clean & Repair Team
+Example Business Team
 
 ---
 This is an automated response. Please do not reply to this email.'
@@ -190,11 +190,11 @@ GRANT SELECT ON v_leads_by_source TO n8n_user;
 -- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 
 -- Check seed data:
--- SELECT * FROM clients WHERE client_id = 'reliant';
+-- SELECT * FROM clients WHERE client_id = 'example';
 
 -- Test lead insert:
 -- INSERT INTO leads (client_id, name, phone, email, message, source, raw)
--- VALUES ('reliant', 'Test User', '5551234567', 'test@example.com', 'Test message', 'website', '{"test": true}');
+-- VALUES ('example', 'Test User', '5551234567', 'test@example.com', 'Test message', 'website', '{"test": true}');
 
 -- View recent leads:
 -- SELECT * FROM v_recent_leads LIMIT 10;

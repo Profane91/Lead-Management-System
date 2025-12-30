@@ -68,7 +68,7 @@ The worker will be available at `http://localhost:8787`
 curl -X POST http://localhost:8787/submit \
   -H "Content-Type: application/json" \
   -d '{
-    "client_id": "reliant",
+    "client_id": "example",
     "name": "John Doe",
     "phone": "5551234567",
     "email": "john@example.com",
@@ -87,7 +87,7 @@ Set these as secrets in Cloudflare Workers:
 ### N8N_WEBHOOK_URL
 The n8n webhook endpoint that will receive the lead data.
 
-Example: `https://temp.reliantcleanandrepair.com/webhook/lead-intake`
+Example: `https://temp.example.com/webhook/lead-intake`
 
 ### WORKER_SHARED_SECRET
 A secret key used to authenticate requests to n8n.
@@ -100,7 +100,7 @@ openssl rand -hex 32
 ### ALLOWED_ORIGINS
 Comma-separated list of allowed origins for CORS.
 
-Example: `https://reliantcleanandrepair.com,https://www.reliantcleanandrepair.com`
+Example: `https://example.com,https://www.example.com`
 
 For local development, include: `http://localhost:4321`
 
@@ -111,13 +111,13 @@ For local development, include: `http://localhost:4321`
 ```bash
 # For production environment
 npx wrangler secret put N8N_WEBHOOK_URL --env production
-# Enter: https://temp.reliantcleanandrepair.com/webhook/lead-intake
+# Enter: https://temp.example.com/webhook/lead-intake
 
 npx wrangler secret put WORKER_SHARED_SECRET --env production
 # Enter: your-generated-secret-key
 
 npx wrangler secret put ALLOWED_ORIGINS --env production
-# Enter: https://reliantcleanandrepair.com,https://www.reliantcleanandrepair.com
+# Enter: https://example.com,https://www.example.com
 ```
 
 ### Option 2: Using .dev.vars for Local Development
@@ -125,7 +125,7 @@ npx wrangler secret put ALLOWED_ORIGINS --env production
 Create a `.dev.vars` file in the project root (gitignored):
 
 ```env
-N8N_WEBHOOK_URL=https://temp.reliantcleanandrepair.com/webhook/test-lead
+N8N_WEBHOOK_URL=https://temp.example.com/webhook/test-lead
 WORKER_SHARED_SECRET=test-secret-key
 ALLOWED_ORIGINS=http://localhost:4321,http://localhost:8787
 ```
@@ -180,7 +180,7 @@ Edit `wrangler.toml`:
 ```bash
 # N8N Webhook URL
 npx wrangler secret put N8N_WEBHOOK_URL --env production
-# Enter: https://temp.reliantcleanandrepair.com/webhook/lead-intake
+# Enter: https://temp.example.com/webhook/lead-intake
 
 # Shared Secret (generate first: openssl rand -hex 32)
 npx wrangler secret put WORKER_SHARED_SECRET --env production
@@ -188,7 +188,7 @@ npx wrangler secret put WORKER_SHARED_SECRET --env production
 
 # Allowed Origins
 npx wrangler secret put ALLOWED_ORIGINS --env production
-# Enter: https://reliantcleanandrepair.com,https://www.reliantcleanandrepair.com
+# Enter: https://example.com,https://www.example.com
 ```
 
 ### 4. Deploy to Production
@@ -222,27 +222,27 @@ Or use a custom domain (see below).
 
 1. Go to Cloudflare Dashboard → Workers & Pages → your worker
 2. Click **Triggers** → **Add Custom Domain**
-3. Enter: `api.reliantcleanandrepair.com`
+3. Enter: `api.example.com`
 4. Cloudflare auto-configures DNS and SSL
 
 Update Astro site:
 ```json
 {
-  "leadEndpoint": "https://api.reliantcleanandrepair.com/submit"
+  "leadEndpoint": "https://api.example.com/submit"
 }
 ```
 
 ### Option 2: Workers Route on Existing Domain
 
 1. Go to **Triggers** → **Add Route**
-2. Route: `reliantcleanandrepair.com/api/*`
+2. Route: `example.com/api/*`
 3. Zone: Select your domain
 4. Worker: lead-gateway
 
 Update Astro site:
 ```json
 {
-  "leadEndpoint": "https://reliantcleanandrepair.com/api/submit"
+  "leadEndpoint": "https://example.com/api/submit"
 }
 ```
 
@@ -260,7 +260,7 @@ Submit a lead form.
 
 ```json
 {
-  "client_id": "reliant",
+  "client_id": "example",
   "name": "John Doe",
   "phone": "5551234567",
   "email": "john@example.com",
@@ -312,7 +312,7 @@ Your n8n webhook will receive:
 
 ```json
 {
-  "client_id": "reliant",
+  "client_id": "example",
   "name": "John Doe",
   "phone": "5551234567",
   "email": "john@example.com",
@@ -334,7 +334,7 @@ Your n8n webhook will receive:
 2. Set path to something like `/webhook/lead-intake`
 3. Method: POST
 4. Authentication: None (use X-Lead-Secret header in subsequent nodes)
-5. Full URL becomes: `https://temp.reliantcleanandrepair.com/webhook/lead-intake`
+5. Full URL becomes: `https://temp.example.com/webhook/lead-intake`
 
 ## Monitoring
 
@@ -437,4 +437,4 @@ MIT License - Feel free to use for commercial projects
 
 ---
 
-Built for Reliant Clean & Repair 🚀
+Built for Example Business 🚀

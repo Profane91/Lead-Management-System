@@ -28,24 +28,24 @@ This workflow receives leads from the Cloudflare Worker, validates them, stores 
 
 ### 1. Connect to PostgreSQL
 
-Using the Docker setup from `/opt/reliant-stack`:
+Using the Docker setup from `/opt/example-stack`:
 
 ```bash
 # Access PostgreSQL container
-docker compose exec postgres psql -U postgres -d reliant_main
+docker compose exec postgres psql -U postgres -d example_main
 
 # Or connect from host
-psql -h localhost -p 5432 -U postgres -d reliant_main
+psql -h localhost -p 5432 -U postgres -d example_main
 ```
 
 ### 2. Run Schema
 
 ```bash
 # From file
-docker compose exec -T postgres psql -U postgres -d reliant_main < /opt/reliant-stack/n8n-lead-workflow/schema.sql
+docker compose exec -T postgres psql -U postgres -d example_main < /opt/example-stack/n8n-lead-workflow/schema.sql
 
 # Or manually
-docker compose exec postgres psql -U postgres -d reliant_main
+docker compose exec postgres psql -U postgres -d example_main
 \i /backups/schema.sql
 ```
 
@@ -56,7 +56,7 @@ docker compose exec postgres psql -U postgres -d reliant_main
 \dt
 
 -- Check clients table
-SELECT * FROM clients WHERE client_id = 'reliant';
+SELECT * FROM clients WHERE client_id = 'example';
 
 -- Check leads table structure
 \d leads
@@ -70,10 +70,10 @@ Edit `schema.sql` and update the INSERT statement with real contact info:
 INSERT INTO clients (
     client_id, business_name, owner_phone, owner_email, ...
 ) VALUES (
-    'reliant',
-    'Reliant Clean & Repair',
+    'example',
+    'Example Business',
     '+15551234567',  -- ⚠️ CHANGE THIS
-    'owner@reliantcleanandrepair.com',  -- ⚠️ CHANGE THIS
+    'owner@example.com',  -- ⚠️ CHANGE THIS
     ...
 );
 ```
@@ -82,7 +82,7 @@ INSERT INTO clients (
 
 ### 1. Import Workflow
 
-1. Log in to n8n: https://temp.reliantcleanandrepair.com
+1. Log in to n8n: https://temp.example.com
 2. Click **Workflows** → **Import from File**
 3. Select `workflow.json`
 4. Click **Import**
@@ -92,11 +92,11 @@ INSERT INTO clients (
 #### PostgreSQL Credential
 
 1. Go to **Credentials** → **Add Credential** → **Postgres**
-2. Name: `Postgres - Reliant`
+2. Name: `Postgres - Example`
 3. Settings:
    ```
-   Host: postgres (or reliant-postgres for Docker)
-   Database: reliant_main
+   Host: postgres (or example-postgres for Docker)
+   Database: example_main
    User: n8n_user
    Password: <from .env N8N_DB_PASSWORD>
    Port: 5432
@@ -148,13 +148,13 @@ In n8n, set these environment variables:
 
 #### Via Docker Environment
 
-Edit `/opt/reliant-stack/.env`:
+Edit `/opt/example-stack/.env`:
 
 ```env
 # Lead workflow settings
 LEAD_SECRET=your-secret-key-from-worker
 TWILIO_FROM_NUMBER=+15551234567
-SMTP_FROM_EMAIL=noreply@reliantcleanandrepair.com
+SMTP_FROM_EMAIL=noreply@example.com
 ```
 
 Then restart n8n:
@@ -174,8 +174,8 @@ docker compose restart n8n
 
 After importing, update these nodes with your credentials:
 
-1. **Insert Lead** node → Select `Postgres - Reliant` credential
-2. **Lookup Client** node → Select `Postgres - Reliant` credential
+1. **Insert Lead** node → Select `Postgres - Example` credential
+2. **Lookup Client** node → Select `Postgres - Example` credential
 3. **Send SMS to Owner** node → Select `Twilio` credential
 4. **Send Auto-Reply SMS** node → Select `Twilio` credential
 5. **Send Email to Owner** node → Select `SMTP` credential
@@ -184,7 +184,7 @@ After importing, update these nodes with your credentials:
 ### 5. Activate Workflow
 
 1. Click **Active** toggle in top right
-2. Copy webhook URL (e.g., `https://temp.reliantcleanandrepair.com/webhook/lead-intake`)
+2. Copy webhook URL (e.g., `https://temp.example.com/webhook/lead-intake`)
 3. Update Cloudflare Worker's `N8N_WEBHOOK_URL` environment variable
 
 ## Workflow Node Breakdown
@@ -272,11 +272,11 @@ After importing, update these nodes with your credentials:
 4. Send test POST request:
 
 ```bash
-curl -X POST https://temp.reliantcleanandrepair.com/webhook/lead-intake \
+curl -X POST https://temp.example.com/webhook/lead-intake \
   -H "Content-Type: application/json" \
   -H "X-Lead-Secret: your-secret-key-here" \
   -d '{
-    "client_id": "reliant",
+    "client_id": "example",
     "name": "Test Customer",
     "phone": "5551234567",
     "email": "test@example.com",
@@ -315,7 +315,7 @@ After deploying the worker and Astro site:
 ### View Workflow Executions
 
 1. In n8n: **Executions** tab
-2. Filter by workflow: "Lead Intake - Reliant"
+2. Filter by workflow: "Lead Intake - Example"
 3. Click any execution to see detailed logs
 
 ### Common Issues
@@ -409,7 +409,7 @@ LIMIT 50;
 
 ```sql
 SELECT * FROM leads
-WHERE client_id = 'reliant'
+WHERE client_id = 'example'
 ORDER BY created_at DESC;
 ```
 
@@ -418,7 +418,7 @@ ORDER BY created_at DESC;
 ```sql
 SELECT source, COUNT(*) as count, DATE(created_at) as date
 FROM leads
-WHERE client_id = 'reliant'
+WHERE client_id = 'example'
 GROUP BY source, DATE(created_at)
 ORDER BY date DESC, count DESC;
 ```
@@ -437,17 +437,17 @@ ORDER BY created_at DESC;
 -- Enable auto-reply
 UPDATE clients
 SET auto_reply_enabled = true
-WHERE client_id = 'reliant';
+WHERE client_id = 'example';
 
 -- Update auto-reply SMS
 UPDATE clients
 SET auto_reply_sms = 'Thank you! We will contact you within 24 hours.'
-WHERE client_id = 'reliant';
+WHERE client_id = 'example';
 
 -- Disable email notifications
 UPDATE clients
 SET notify_email = false
-WHERE client_id = 'reliant';
+WHERE client_id = 'example';
 ```
 
 ### Lead Statistics
@@ -461,7 +461,7 @@ GROUP BY client_id;
 -- Conversion funnel (requires status field)
 SELECT status, COUNT(*) as count
 FROM leads
-WHERE client_id = 'reliant'
+WHERE client_id = 'example'
 GROUP BY status;
 
 -- Leads per day (last 30 days)

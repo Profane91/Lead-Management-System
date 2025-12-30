@@ -1,6 +1,6 @@
 # Client Onboarding Guide
 
-Quick guide to add a new service business client to the Reliant Stack lead management system.
+Quick guide to add a new service business client to the Example Stack lead management system.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Quick guide to add a new service business client to the Reliant Stack lead manag
 ### 1.1 Clone Template
 
 ```bash
-cd /opt/reliant-stack
+cd /opt/example-stack
 cp -r astro-service-site astro-newclient-site
 cd astro-newclient-site
 ```
@@ -114,7 +114,7 @@ npx wrangler secret list --env production
 
 # Update (append new domain)
 npx wrangler secret put ALLOWED_ORIGINS --env production
-# Enter: https://reliantcleanandrepair.com,https://newclient.com,https://www.newclient.com
+# Enter: https://example.com,https://newclient.com,https://www.newclient.com
 ```
 
 **Important**: Include all protocols and subdomains (http/https, www/non-www).
@@ -135,7 +135,7 @@ Check for `Access-Control-Allow-Origin: https://newclient.com` in response.
 ### 4.1 Connect to PostgreSQL
 
 ```bash
-docker compose exec postgres psql -U postgres -d reliant_main
+docker compose exec postgres psql -U postgres -d example_main
 ```
 
 ### 4.2 Insert Client Record
@@ -361,7 +361,7 @@ npx wrangler tail --env production
 # Click latest execution → verify all nodes green
 
 # Check database
-docker compose exec postgres psql -U postgres -d reliant_main
+docker compose exec postgres psql -U postgres -d example_main
 SELECT * FROM leads ORDER BY created_at DESC LIMIT 1;
 ```
 
@@ -383,7 +383,7 @@ SELECT * FROM leads ORDER BY created_at DESC LIMIT 1;
 **URLs**:
 - Astro site: `https://newclient.com`
 - Worker: `https://lead-gateway.YOUR-SUBDOMAIN.workers.dev/submit`
-- n8n webhook: `https://temp.reliantcleanandrepair.com/webhook/lead-intake`
+- n8n webhook: `https://temp.example.com/webhook/lead-intake`
 
 **Critical Environment Variables**:
 - Worker: `ALLOWED_ORIGINS`, `N8N_WEBHOOK_URL`, `WORKER_SHARED_SECRET`

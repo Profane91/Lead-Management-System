@@ -1,4 +1,4 @@
-# Reliant Stack - Complete Lead Management System
+# Example Stack - Complete Lead Management System
 
 Production-ready VPS stack for lead capture, processing, and management with n8n workflow automation, Cloudflare Workers gateway, Astro website, PostgreSQL database, and Uptime Kuma monitoring.
 
@@ -65,7 +65,7 @@ docker compose ps
 
 ```bash
 # Install lead management schema
-docker exec -i reliant_postgres psql -U postgres -d your_database_name < n8n-lead-workflow/schema.sql
+docker exec -i example_postgres psql -U postgres -d your_database_name < n8n-lead-workflow/schema.sql
 ```
 
 ### 4. Configure Caddy Reverse Proxy
@@ -195,7 +195,7 @@ Automated daily backups run at 2 AM (configurable in `.env`):
 
 ```bash
 # PostgreSQL shell
-docker exec -it reliant_postgres psql -U postgres -d your_database_name
+docker exec -it example_postgres psql -U postgres -d your_database_name
 
 # View recent leads
 SELECT id, name, email, phone, service, created_at FROM leads ORDER BY created_at DESC LIMIT 10;
@@ -226,7 +226,7 @@ curl -X POST https://your-worker.workers.dev/submit \
 ### Verify Lead in Database
 
 ```bash
-docker exec reliant_postgres psql -U postgres -d your_database_name \
+docker exec example_postgres psql -U postgres -d your_database_name \
   -c "SELECT * FROM leads ORDER BY created_at DESC LIMIT 1;"
 ```
 

@@ -1,4 +1,4 @@
-# Reliant Stack - Complete Lead Management System
+# Example Stack - Complete Lead Management System
 
 Production-ready VPS stack for lead capture, processing, and management with automated workflows, spam protection, and multi-channel notifications.
 
@@ -16,8 +16,8 @@ Complete lead management pipeline:
 
 ```bash
 # 1. Clone repository
-git clone <your-repo-url> reliant-stack
-cd reliant-stack
+git clone <your-repo-url> example-stack
+cd example-stack
 
 # 2. Configure environment
 cp .env.example .env
@@ -31,7 +31,7 @@ openssl rand -hex 32  # For N8N_JWT_SECRET
 docker compose up -d
 
 # 5. Initialize database
-docker exec -i reliant_postgres psql -U <user> -d <db> < n8n-lead-workflow/schema.sql
+docker exec -i example_postgres psql -U <user> -d <db> < n8n-lead-workflow/schema.sql
 ```
 
 **📚 Full setup guide:** See [SETUP.md](SETUP.md) for complete step-by-step instructions.
@@ -161,7 +161,7 @@ curl -X POST https://your-worker.workers.dev/submit \
   }'
 
 # Verify in database
-docker exec reliant_postgres psql -U user -d db \
+docker exec example_postgres psql -U user -d db \
   -c "SELECT * FROM leads ORDER BY created_at DESC LIMIT 1;"
 ```
 
@@ -204,7 +204,7 @@ docker exec reliant_postgres psql -U user -d db \
 
 ### n8n workflow fails
 - Check PostgreSQL is running: `docker compose ps postgres`
-- Verify database schema installed: `docker exec reliant_postgres psql -U user -d db -c "\dt"`
+- Verify database schema installed: `docker exec example_postgres psql -U user -d db -c "\dt"`
 - Review n8n logs: `docker compose logs n8n`
 
 See [DEPLOYMENT.md](DEPLOYMENT.md#-troubleshooting) for more solutions.
@@ -262,7 +262,7 @@ docker compose up -d
 1. **Rsync to Remote Server** (recommended):
    ```bash
    # Add to crontab: crontab -e
-   0 3 * * * rsync -az /opt/reliant-stack/postgres-backups/ user@backup-server:/backups/reliant-stack/
+   0 3 * * * rsync -az /opt/example-stack/postgres-backups/ user@backup-server:/backups/example-stack/
    ```
 
 2. **Cloud Storage (rclone)**:
@@ -272,7 +272,7 @@ docker compose up -d
    rclone config
    
    # Add to crontab
-   0 3 * * * rclone sync /opt/reliant-stack/postgres-backups/ remote:reliant-backups/
+   0 3 * * * rclone sync /opt/example-stack/postgres-backups/ remote:example-backups/
    ```
 
 3. **S3/Backblaze B2**:
@@ -347,10 +347,10 @@ docker stats
 
 ```bash
 # As superuser
-docker compose exec postgres psql -U postgres -d reliant_main
+docker compose exec postgres psql -U postgres -d example_main
 
 # As n8n user
-docker compose exec postgres psql -U n8n_user -d reliant_main
+docker compose exec postgres psql -U n8n_user -d example_main
 ```
 
 ### Check Database Size
@@ -384,7 +384,7 @@ docker compose exec n8n ping postgres
 ### n8n Webhook Issues
 
 Ensure these are properly configured:
-- Caddy is properly forwarding `temp.reliantcleanandrepair.com` to `127.0.0.1:5679`
+- Caddy is properly forwarding `temp.example.com` to `127.0.0.1:5679`
 - DNS points to your VPS IP
 - SSL certificate is valid (Caddy handles this automatically)
 
@@ -397,7 +397,7 @@ docker compose exec n8n n8n user:reset --email=admin@example.com
 ## File Structure
 
 ```
-/opt/reliant-stack/
+/opt/example-stack/
 ├── docker-compose.yml       # Main Docker Compose configuration
 ├── .env                     # Environment variables (DO NOT COMMIT)
 ├── .env.example            # Template for environment variables
@@ -420,7 +420,7 @@ docker compose exec n8n n8n user:reset --email=admin@example.com
 
 ## Network Configuration
 
-- **Network Name**: `reliant-network`
+- **Network Name**: `example-network`
 - **Driver**: bridge (isolated from host)
 - **Exposed Ports**: Only `127.0.0.1:5679` and `127.0.0.1:3002` (localhost only)
 - **Port 80/443**: NOT used (Caddy on host handles SSL/TLS)
@@ -429,9 +429,9 @@ docker compose exec n8n n8n user:reset --email=admin@example.com
 
 All data is stored in named Docker volumes:
 
-- `reliant-postgres-data`: PostgreSQL database files
-- `reliant-n8n-data`: n8n workflows, credentials, and settings
-- `reliant-uptime-kuma-data`: Uptime Kuma configuration and monitoring data
+- `example-postgres-data`: PostgreSQL database files
+- `example-n8n-data`: n8n workflows, credentials, and settings
+- `example-uptime-kuma-data`: Uptime Kuma configuration and monitoring data
 
 Backups are stored in the mounted directory: `./postgres-backups/`
 

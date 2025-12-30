@@ -1,5 +1,5 @@
 {
-  "name": "Lead Intake - Reliant",
+  "name": "Lead Intake - Example",
   "nodes": [
     {
       "parameters": {
@@ -72,7 +72,7 @@
       "credentials": {
         "postgres": {
           "id": "1",
-          "name": "Postgres - Reliant"
+          "name": "Postgres - Example"
         }
       }
     },
@@ -92,7 +92,7 @@
       "credentials": {
         "postgres": {
           "id": "1",
-          "name": "Postgres - Reliant"
+          "name": "Postgres - Example"
         }
       }
     },
@@ -169,7 +169,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'notifications@reliantcleanandrepair.com'}}",
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'notifications@example.com'}}",
         "toEmail": "={{$json.owner_email}}",
         "subject": "=🔔 New Lead: {{$json.name}} - {{$json.business_name}}",
         "emailType": "html",
@@ -267,7 +267,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@reliantcleanandrepair.com'}}",
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@example.com'}}",
         "toEmail": "={{$json.email}}",
         "subject": "={{$json.processed_subject}}",
         "emailType": "text",
