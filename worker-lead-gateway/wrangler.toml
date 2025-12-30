@@ -1,0 +1,29 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "lead-gateway"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Account ID - get from: wrangler whoami
+account_id = "89f1cccb6a6de43135b01002d5a35839"
+
+# Workers Paid plan recommended for production
+# Usage Model: https://developers.cloudflare.com/workers/platform/pricing
+
+[env.production]
+name = "lead-gateway"
+# Set environment variables with: wrangler secret put <NAME>
+# N8N_WEBHOOK_URL = "https://temp.reliantcleanandrepair.com/webhook/lead-intake"
+# WORKER_SHARED_SECRET = "your-secret-key-here"
+# ALLOWED_ORIGINS = "https://reliantcleanandrepair.com,https://www.reliantcleanandrepair.com"
+
+[env.staging]
+name = "lead-gateway-staging"
+# N8N_WEBHOOK_URL = "https://temp.reliantcleanandrepair.com/webhook/test-lead-intake"
+# WORKER_SHARED_SECRET = "staging-secret"
+# ALLOWED_ORIGINS = "http://localhost:4321,https://staging.reliantcleanandrepair.com"
+
+# Development environment
+[env.development]
+name = "lead-gateway-dev"
+# For local testing with wrangler dev

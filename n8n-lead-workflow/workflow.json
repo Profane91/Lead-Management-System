@@ -1,0 +1,503 @@
+{
+  "name": "Lead Intake - Reliant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "lead-intake"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$node[\"Webhook\"].json[\"headers\"][\"x-lead-secret\"]}}",
+              "value2": "={{$env.LEAD_SECRET || 'your-secret-key-here'}}"
+            }
+          ]
+        }
+      },
+      "id": "validate-secret",
+      "name": "Validate Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"Unauthorized\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "unauthorized-response",
+      "name": "Unauthorized Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize and trim all fields\nconst body = $input.item.json.body;\n\nconst normalized = {\n  client_id: (body.client_id || '').trim(),\n  name: (body.name || '').trim(),\n  phone: (body.phone || '').trim(),\n  email: body.email ? body.email.trim().toLowerCase() : null,\n  message: (body.message || '').trim(),\n  service: body.service ? body.service.trim() : null,\n  source: body.source ? body.source.trim() : 'unknown',\n  utm: body.utm ? body.utm.trim() : null,\n  ip: body.ip || 'unknown',\n  user_agent: body.user_agent || 'unknown',\n  timestamp: body.timestamp || new Date().toISOString(),\n  raw_data: body\n};\n\nreturn { json: normalized };"
+      },
+      "id": "normalize-data",
+      "name": "Normalize Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (client_id, name, phone, email, message, service, source, utm, ip, user_agent, created_at, raw)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\nRETURNING id, created_at;",
+        "options": {
+          "queryParameters": "={{[\n  $json.client_id,\n  $json.name,\n  $json.phone,\n  $json.email,\n  $json.message,\n  $json.service,\n  $json.source,\n  $json.utm,\n  $json.ip,\n  $json.user_agent,\n  $json.timestamp,\n  JSON.stringify($json.raw_data)\n]}}"
+        }
+      },
+      "id": "insert-lead",
+      "name": "Insert Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 400],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres - Reliant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT business_name, owner_phone, owner_email, notify_sms, notify_email, auto_reply_enabled, auto_reply_sms, auto_reply_email_subject, auto_reply_email_body\nFROM clients\nWHERE client_id = $1;",
+        "options": {
+          "queryParameters": "={{[$json.client_id]}}"
+        }
+      },
+      "id": "lookup-client",
+      "name": "Lookup Client",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 400],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres - Reliant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge lead data with client settings\nconst leadData = $node[\"Normalize Data\"].json;\nconst clientData = $input.item.json[0] || {};\nconst leadId = $node[\"Insert Lead\"].json[0]?.id;\n\n// Create message snippet (first 100 chars)\nconst messageSnippet = leadData.message.substring(0, 100) + (leadData.message.length > 100 ? '...' : '');\n\n// Parse UTM parameters\nconst utmParams = {};\nif (leadData.utm) {\n  leadData.utm.split('&').forEach(param => {\n    const [key, value] = param.split('=');\n    if (key && value) utmParams[key] = decodeURIComponent(value);\n  });\n}\n\nreturn {\n  json: {\n    // Lead info\n    lead_id: leadId,\n    client_id: leadData.client_id,\n    name: leadData.name,\n    phone: leadData.phone,\n    email: leadData.email,\n    message: leadData.message,\n    message_snippet: messageSnippet,\n    service: leadData.service || 'Not specified',\n    source: leadData.source,\n    utm_source: utmParams.utm_source || 'direct',\n    utm_medium: utmParams.utm_medium || '',\n    utm_campaign: utmParams.utm_campaign || '',\n    ip: leadData.ip,\n    timestamp: leadData.timestamp,\n    \n    // Client settings\n    business_name: clientData.business_name || 'Unknown Business',\n    owner_phone: clientData.owner_phone,\n    owner_email: clientData.owner_email,\n    notify_sms: clientData.notify_sms !== false,\n    notify_email: clientData.notify_email !== false,\n    auto_reply_enabled: clientData.auto_reply_enabled === true,\n    auto_reply_sms: clientData.auto_reply_sms || '',\n    auto_reply_email_subject: clientData.auto_reply_email_subject || '',\n    auto_reply_email_body: clientData.auto_reply_email_body || ''\n  }\n};"
+      },
+      "id": "merge-data",
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.notify_sms}}",
+              "value2": true
+            },
+            {
+              "value1": "={{!!$json.owner_phone}}"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "check-sms-enabled",
+      "name": "Check SMS Enabled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "fromNumber": "={{$env.TWILIO_FROM_NUMBER}}",
+        "toNumber": "={{$json.owner_phone}}",
+        "message": "=🔔 New Lead: {{$json.business_name}}\n\n👤 {{$json.name}}\n📞 {{$json.phone}}\n📧 {{$json.email || 'No email'}}\n🏷️ Service: {{$json.service}}\n📍 Source: {{$json.source}}\n💬 \"{{$json.message_snippet}}\"\n\nView details in your dashboard.",
+        "options": {}
+      },
+      "id": "send-sms-owner",
+      "name": "Send SMS to Owner",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1780, 200],
+      "credentials": {
+        "twilioApi": {
+          "id": "2",
+          "name": "Twilio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.notify_email}}",
+              "value2": true
+            },
+            {
+              "value1": "={{!!$json.owner_email}}"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "check-email-enabled",
+      "name": "Check Email Enabled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 500]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'notifications@reliantcleanandrepair.com'}}",
+        "toEmail": "={{$json.owner_email}}",
+        "subject": "=🔔 New Lead: {{$json.name}} - {{$json.business_name}}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: #2563eb; color: white; padding: 20px; border-radius: 5px 5px 0 0; }\n    .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }\n    .field { margin-bottom: 15px; }\n    .label { font-weight: bold; color: #6b7280; }\n    .value { margin-top: 5px; }\n    .message-box { background: white; padding: 15px; border-left: 4px solid #2563eb; margin: 15px 0; }\n    .footer { background: #1f2937; color: white; padding: 15px; text-align: center; border-radius: 0 0 5px 5px; font-size: 12px; }\n    .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🔔 New Lead Received</h1>\n      <p>{{$json.business_name}}</p>\n    </div>\n    \n    <div class=\"content\">\n      <div class=\"field\">\n        <div class=\"label\">👤 Customer Name</div>\n        <div class=\"value\">{{$json.name}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">📞 Phone</div>\n        <div class=\"value\"><a href=\"tel:{{$json.phone}}\">{{$json.phone}}</a></div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">📧 Email</div>\n        <div class=\"value\"><a href=\"mailto:{{$json.email}}\">{{$json.email || 'Not provided'}}</a></div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">🏷️ Service Requested</div>\n        <div class=\"value\">{{$json.service}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">💬 Message</div>\n        <div class=\"message-box\">{{$json.message}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">📍 Source</div>\n        <div class=\"value\">{{$json.source}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">🎯 UTM Campaign</div>\n        <div class=\"value\">Source: {{$json.utm_source}} | Medium: {{$json.utm_medium || 'N/A'}} | Campaign: {{$json.utm_campaign || 'N/A'}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">🌐 IP Address</div>\n        <div class=\"value\">{{$json.ip}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">🕒 Received</div>\n        <div class=\"value\">{{$json.timestamp}}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"label\">🆔 Lead ID</div>\n        <div class=\"value\">{{$json.lead_id}}</div>\n      </div>\n    </div>\n    \n    <div class=\"footer\">\n      <p>This is an automated notification from your lead management system.</p>\n      <p>Respond to this lead within 5 minutes for best conversion rates!</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-email-owner",
+      "name": "Send Email to Owner",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1780, 400],
+      "credentials": {
+        "smtp": {
+          "id": "3",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.auto_reply_enabled}}",
+              "value2": true
+            },
+            {
+              "value1": "={{!!$json.phone}}"
+            },
+            {
+              "value1": "={{!!$json.auto_reply_sms}}"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "check-auto-reply-sms",
+      "name": "Check Auto-Reply SMS",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 700]
+    },
+    {
+      "parameters": {
+        "fromNumber": "={{$env.TWILIO_FROM_NUMBER}}",
+        "toNumber": "={{$json.phone}}",
+        "message": "={{$json.auto_reply_sms}}",
+        "options": {}
+      },
+      "id": "send-auto-reply-sms",
+      "name": "Send Auto-Reply SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1780, 600],
+      "credentials": {
+        "twilioApi": {
+          "id": "2",
+          "name": "Twilio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.auto_reply_enabled}}",
+              "value2": true
+            },
+            {
+              "value1": "={{!!$json.email}}"
+            },
+            {
+              "value1": "={{!!$json.auto_reply_email_body}}"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "check-auto-reply-email",
+      "name": "Check Auto-Reply Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 900]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Replace template variables in email\nconst subject = $json.auto_reply_email_subject || 'Thank you for contacting us';\nconst body = $json.auto_reply_email_body || 'Thank you for your inquiry.';\n\nconst replacements = {\n  '{{name}}': $json.name,\n  '{{service}}': $json.service || 'your inquiry',\n  '{{business_name}}': $json.business_name\n};\n\nlet processedSubject = subject;\nlet processedBody = body;\n\nfor (const [placeholder, value] of Object.entries(replacements)) {\n  processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);\n  processedBody = processedBody.replace(new RegExp(placeholder, 'g'), value);\n}\n\nreturn {\n  json: {\n    ...($json),\n    processed_subject: processedSubject,\n    processed_body: processedBody\n  }\n};"
+      },
+      "id": "process-email-template",
+      "name": "Process Email Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 800]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@reliantcleanandrepair.com'}}",
+        "toEmail": "={{$json.email}}",
+        "subject": "={{$json.processed_subject}}",
+        "emailType": "text",
+        "message": "={{$json.processed_body}}",
+        "options": {}
+      },
+      "id": "send-auto-reply-email",
+      "name": "Send Auto-Reply Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2000, 800],
+      "credentials": {
+        "smtp": {
+          "id": "3",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\": true, \"lead_id\": \"{{$node['Insert Lead'].json[0].id}}\", \"timestamp\": \"{{$node['Insert Lead'].json[0].created_at}}\"}",
+        "options": {}
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2220, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Secret": {
+      "main": [
+        [
+          {
+            "node": "Unauthorized Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead": {
+      "main": [
+        [
+          {
+            "node": "Lookup Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Client": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Check SMS Enabled",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Email Enabled",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Auto-Reply SMS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Auto-Reply Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check SMS Enabled": {
+      "main": [
+        [
+          {
+            "node": "Send SMS to Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Check Email Enabled": {
+      "main": [
+        [
+          {
+            "node": "Send Email to Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Check Auto-Reply SMS": {
+      "main": [
+        [
+          {
+            "node": "Send Auto-Reply SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Check Auto-Reply Email": {
+      "main": [
+        [
+          {
+            "node": "Process Email Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Process Email Template": {
+      "main": [
+        [
+          {
+            "node": "Send Auto-Reply Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SMS to Owner": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email to Owner": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Auto-Reply SMS": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Auto-Reply Email": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-28T00:00:00.000Z",
+  "versionId": "1"
+}

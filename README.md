@@ -1,135 +1,233 @@
-# Reliant Stack - Docker Compose Setup
+# Reliant Stack - Complete Lead Management System
 
-Production-ready Docker Compose stack for n8n, Uptime Kuma, and PostgreSQL on a VPS running Caddy as the host reverse proxy.
+Production-ready VPS stack for lead capture, processing, and management with automated workflows, spam protection, and multi-channel notifications.
 
-## Architecture Overview
+## 🎯 What This Does
 
-- **n8n**: Workflow automation (port `127.0.0.1:5679` → container `5678`)
-- **Uptime Kuma**: Monitoring dashboard (port `127.0.0.1:3002` → container `3001`)
-- **PostgreSQL**: Database backend (no exposed ports, internal network only)
-- **Postgres Backup**: Automated daily backups with retention policy
+Complete lead management pipeline:
+1. **Website Form** (Astro) → Customer submits inquiry
+2. **Cloudflare Worker** → Validates, filters spam, enforces CORS
+3. **n8n Workflow** → Processes lead, stores in database
+4. **PostgreSQL** → Secure lead storage with client management
+5. **Notifications** → SMS (Twilio) + Email (SMTP) to business owner
+6. **Auto-Reply** → Instant confirmation to customer
 
-All services run on an isolated Docker network (`reliant-network`) with proper health checks and dependencies.
-
-## Prerequisites
-
-- Docker Engine installed
-- Docker Compose V2 (docker compose, not docker-compose)
-- Caddy running on the host (not in Docker)
-- Sufficient disk space for PostgreSQL data and backups
-
-## Initial Installation
-
-### 1. Clone or Create the Project Directory
+## 🚀 Quick Start
 
 ```bash
-cd /opt/reliant-stack
-```
+# 1. Clone repository
+git clone <your-repo-url> reliant-stack
+cd reliant-stack
 
-### 2. Configure Environment Variables
-
-```bash
-# Copy the example environment file
+# 2. Configure environment
 cp .env.example .env
+nano .env  # Add your credentials
 
-# Edit the .env file with secure credentials
-nano .env
-```
+# 3. Generate secure keys
+openssl rand -hex 32  # For N8N_ENCRYPTION_KEY
+openssl rand -hex 32  # For N8N_JWT_SECRET
 
-**CRITICAL**: Update these values in `.env`:
-- `POSTGRES_PASSWORD`: Strong password for PostgreSQL superuser
-- `POSTGRES_NON_ROOT_PASSWORD`: Strong password for n8n database user
-- `N8N_DB_PASSWORD`: Must match `POSTGRES_NON_ROOT_PASSWORD`
-- `N8N_ENCRYPTION_KEY`: Generate with `openssl rand -hex 32`
-- `N8N_JWT_SECRET`: Generate with `openssl rand -hex 32`
-
-### 3. Create Required Directories
-
-```bash
-mkdir -p postgres-backups
-```
-
-### 4. Start the Stack
-
-```bash
+# 4. Start services
 docker compose up -d
+
+# 5. Initialize database
+docker exec -i reliant_postgres psql -U <user> -d <db> < n8n-lead-workflow/schema.sql
 ```
 
-### 5. Verify All Services Are Running
+**📚 Full setup guide:** See [SETUP.md](SETUP.md) for complete step-by-step instructions.
+
+## 📦 Components
+
+### Core Infrastructure (`docker-compose.yml`)
+- **PostgreSQL 16**: Lead database with automated backups
+- **n8n**: Workflow automation platform
+- **Uptime Kuma**: Service monitoring dashboard
+
+### Astro Service Website (`astro-service-site/`)
+- Config-driven business website (single JSON source)
+- Mobile-responsive design with CTAs
+- Contact form with UTM tracking and honeypot spam protection
+- Cloudflare Pages deployment ready
+
+### Cloudflare Worker (`worker-lead-gateway/`)
+- Lead validation and spam filtering
+- CORS enforcement
+- Request forwarding to n8n webhook
+- Shared secret authentication
+
+### n8n Workflow (`n8n-lead-workflow/`)
+- Database schema with client management
+- Lead processing workflow (simple version included)
+- Expandable for SMS/email notifications
+- Auto-reply system support
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│  Astro Website  │
+│  (Static HTML)  │
+└────────┬────────┘
+         │ POST /submit
+         ↓
+┌─────────────────────┐
+│ Cloudflare Worker   │
+│ • Validation        │
+│ • Spam Check        │
+│ • CORS              │
+└────────┬────────────┘
+         │ POST /webhook/lead
+         ↓
+┌─────────────────────┐
+│      n8n            │
+│ • Normalize Data    │
+│ • Insert Database   │
+│ • Send Notifications│
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│    PostgreSQL       │
+│ • clients table     │
+│ • leads table       │
+│ • Automated backups │
+└─────────────────────┘
+```
+
+## 🛠️ Setup Requirements
+
+- **Server**: Ubuntu 20.04+ VPS (2GB RAM minimum)
+- **Software**: Docker, Docker Compose V2, Caddy
+- **Domain**: DNS configured for n8n and monitoring
+- **Cloudflare**: Account for Worker and Pages deployment
+- **Optional**: Twilio (SMS), SMTP credentials (email)
+
+## 📖 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [SETUP.md](SETUP.md) | Complete step-by-step installation guide |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Architecture, configuration, troubleshooting |
+| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Guide for adding new clients |
+| [astro-service-site/README.md](astro-service-site/README.md) | Website customization |
+| [worker-lead-gateway/README.md](worker-lead-gateway/README.md) | Worker deployment |
+| [n8n-lead-workflow/README.md](n8n-lead-workflow/README.md) | Workflow setup |
+
+## ⚡ Features
+
+### Lead Management
+- ✅ Multi-client support with separate configurations
+- ✅ Full lead history with source tracking
+- ✅ UTM campaign tracking
+- ✅ Raw request data preservation (JSONB)
+- ✅ Automated database cleanup
+
+### Security
+- ✅ Shared secret authentication between Worker and n8n
+- ✅ CORS origin validation
+- ✅ Honeypot spam detection
+- ✅ Input validation and sanitization
+- ✅ PostgreSQL prepared statements (SQL injection prevention)
+
+### Notifications
+- ✅ Configurable SMS alerts (Twilio)
+- ✅ Configurable email notifications (SMTP)
+- ✅ Auto-reply to customers
+- ✅ Template variable support
+- ✅ Per-client notification preferences
+
+### Operations
+- ✅ Automated daily PostgreSQL backups
+- ✅ Backup retention policy (configurable)
+- ✅ Health checks on all services
+- ✅ Uptime monitoring dashboard
+- ✅ Docker log aggregation
+
+## 🧪 Testing
+
+Test the complete pipeline:
 
 ```bash
-docker compose ps
+curl -X POST https://your-worker.workers.dev/submit \
+  -H "Content-Type: application/json" \
+  -H "Origin: https://yourdomain.com" \
+  -d '{
+    "client_id": "your-client-id",
+    "name": "Test Customer",
+    "email": "test@example.com",
+    "phone": "555-123-4567",
+    "service": "Test Service",
+    "message": "Testing pipeline",
+    "source": "website"
+  }'
+
+# Verify in database
+docker exec reliant_postgres psql -U user -d db \
+  -c "SELECT * FROM leads ORDER BY created_at DESC LIMIT 1;"
 ```
 
-All services should show "Up" status.
+## 🔒 Security Best Practices
 
-### 6. Check Logs
+- Never commit `.env` file to version control
+- Use strong passwords (20+ characters, random)
+- Rotate `N8N_ENCRYPTION_KEY` and `N8N_JWT_SECRET` every 90 days
+- Keep Docker images updated monthly
+- Monitor n8n execution logs regularly
+- Use Cloudflare WAF rules for Worker protection
+- Limit PostgreSQL access to Docker network only
 
-```bash
-# All services
-docker compose logs -f
+## 📊 Monitoring & Maintenance
 
-# Specific service
-docker compose logs -f n8n
-docker compose logs -f postgres
-docker compose logs -f uptime-kuma
-```
+### Daily
+- Check Uptime Kuma dashboard for service health
+- Review n8n execution logs for errors
 
-## Configure Caddy Reverse Proxy
+### Weekly
+- Verify backups are running (`ls -la postgres-backups/`)
+- Review lead volume and conversion sources
 
-Add these configurations to your Caddyfile on the **host** (not in Docker):
+### Monthly
+- Update Docker images: `docker compose pull && docker compose up -d`
+- Clean old backups beyond retention period
+- Review and update Worker configuration
 
-```caddy
-# n8n
-temp.reliantcleanandrepair.com {
-    reverse_proxy 127.0.0.1:5679
-}
+## 🐛 Troubleshooting
 
-# Uptime Kuma (adjust domain as needed)
-monitor.reliantcleanandrepair.com {
-    reverse_proxy 127.0.0.1:3002
-}
-```
+### Worker returns 502
+- Verify n8n is accessible: `curl https://your-n8n-domain.com/health`
+- Check n8n workflow is activated
+- Review Worker secrets are set correctly
 
-Then reload Caddy:
+### Leads not appearing in database
+- Check n8n Executions tab for errors
+- Verify PostgreSQL credential in n8n
+- Test n8n webhook directly with curl
 
-```bash
-sudo systemctl reload caddy
-```
+### n8n workflow fails
+- Check PostgreSQL is running: `docker compose ps postgres`
+- Verify database schema installed: `docker exec reliant_postgres psql -U user -d db -c "\dt"`
+- Review n8n logs: `docker compose logs n8n`
 
-## Service Access
+See [DEPLOYMENT.md](DEPLOYMENT.md#-troubleshooting) for more solutions.
 
-- **n8n**: https://temp.reliantcleanandrepair.com
-- **Uptime Kuma**: Configure your own domain in Caddy pointing to `127.0.0.1:3002`
+## 🤝 Contributing
 
-## Updating Services
+This is a template project. Fork and customize for your needs!
 
-### Update All Services
+## 📄 License
 
-```bash
-cd /opt/reliant-stack
-docker compose pull
-docker compose up -d
-```
+MIT License - See LICENSE file for details.
 
-### Update Specific Service
+## 🆘 Support
 
-```bash
-# Example: Update n8n only
-docker compose pull n8n
-docker compose up -d n8n
-```
+1. Check documentation in `/docs`
+2. Review troubleshooting guides
+3. Inspect Docker logs: `docker compose logs`
+4. Check n8n execution history
+5. Review Cloudflare Worker logs: `npx wrangler tail`
 
-### View Update Status
+---
 
-```bash
-docker compose ps
-docker compose logs -f <service-name>
-```
-
-## Backup & Restore
-
-### Automated Backups
+**Made with ❤️ for service businesses that need reliable lead management**
 
 The `postgres-backup` container automatically backs up all PostgreSQL databases daily at 2 AM (configurable via `BACKUP_SCHEDULE` in `.env`).
 

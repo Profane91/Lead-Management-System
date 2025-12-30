@@ -1,0 +1,30 @@
+# Environment files with secrets
+.env
+*.env.local
+.dev.vars
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Database backups and data
+postgres-backups/
+*.sql.gz
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# n8n data (contains credentials)
+n8n-data/

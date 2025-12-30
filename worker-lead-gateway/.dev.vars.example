@@ -1,0 +1,7 @@
+# Example .dev.vars file for local development
+# Copy this to .dev.vars and update with your values
+# DO NOT COMMIT .dev.vars TO VERSION CONTROL
+
+N8N_WEBHOOK_URL=https://temp.reliantcleanandrepair.com/webhook/test-lead
+WORKER_SHARED_SECRET=dev-secret-key-change-me
+ALLOWED_ORIGINS=http://localhost:4321,http://localhost:8787

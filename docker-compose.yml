@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reliant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_NON_ROOT_USER: ${POSTGRES_NON_ROOT_USER}
+      POSTGRES_NON_ROOT_PASSWORD: ${POSTGRES_NON_ROOT_PASSWORD}
+    volumes:
+      - reliant-postgres-data:/var/lib/postgresql/data
+      - ./postgres-backups:/backups
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    networks:
+      - reliant-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: reliant-n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5679:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_PORT=5678
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_SECURE_COOKIE=true
+      - GENERIC_TIMEZONE=America/Los_Angeles
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_JWT_SECRET}
+    volumes:
+      - reliant-n8n-data:/home/node/.n8n
+    networks:
+      - reliant-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: reliant-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:3001"
+    volumes:
+      - reliant-uptime-kuma-data:/app/data
+    networks:
+      - reliant-network
+
+  postgres-backup:
+    image: postgres:16-alpine
+    container_name: reliant-postgres-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - ./postgres-backups:/backups
+      - ./backup-script.sh:/backup-script.sh:ro
+    networks:
+      - reliant-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command: -c "apk add --no-cache dcron && echo \"$$BACKUP_SCHEDULE /backup-script.sh >> /var/log/backup.log 2>&1\" | crontab - && crond -f -l 2"
+
+networks:
+  reliant-network:
+    name: reliant-network
+    driver: bridge
+
+volumes:
+  reliant-postgres-data:
+    name: reliant-postgres-data
+  reliant-n8n-data:
+    name: reliant-n8n-data
+  reliant-uptime-kuma-data:
+    name: reliant-uptime-kuma-data
